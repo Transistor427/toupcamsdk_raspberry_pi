@@ -139,6 +139,29 @@ class ThreadedHttpServer(ThreadingMixIn, server.HTTPServer):
 class MjpegHandler(server.BaseHTTPRequestHandler):
     bridge = None
 
+    def do_HEAD(self):  # noqa: N802
+        if self.path.startswith("/snapshot.jpg") or self.path.startswith("/snapshot"):
+            with self.bridge.state.lock:
+                jpeg = self.bridge.state.jpeg
+            if jpeg is None:
+                self.send_error(503, "No frame available yet")
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(jpeg)))
+            self.end_headers()
+            return
+
+        if self.path.startswith("/health"):
+            body = b'{"ok": true}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            return
+
+        self.send_error(404, "Not found")
+
     def do_GET(self):  # noqa: N802
         if self.path in ("/", "/index.html"):
             self._serve_index()
