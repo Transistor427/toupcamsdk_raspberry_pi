@@ -4,7 +4,7 @@ set -euo pipefail
 # Save one frame from local Toupcam snapshot endpoint.
 
 SNAPSHOT_URL="${SNAPSHOT_URL:-http://127.0.0.1:8081/snapshot.jpg}"
-OUT_DIR="${1:-/home/pi/printer_data/timelapse/toupcam}"
+OUT_DIR="${1:-/home/pi/printer_data/config/FRAMES}"
 
 mkdir -p "${OUT_DIR}"
 

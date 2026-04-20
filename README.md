@@ -121,7 +121,7 @@ chmod +x klipper_take_frame.sh
 Добавь:
 ```ini
 [gcode_shell_command touptek_take_frame]
-command: /bin/bash /home/pi/toupcamsdk_raspberry_pi/klipper_take_frame.sh /home/pi/printer_data/timelapse/toupcam
+command: /bin/bash /home/pi/toupcamsdk_raspberry_pi/klipper_take_frame.sh /home/pi/printer_data/config/FRAMES
 timeout: 10.
 verbose: False
 
