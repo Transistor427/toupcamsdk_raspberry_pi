@@ -39,6 +39,17 @@ chmod +x run_toupcam_stream.sh
 ./run_toupcam_stream.sh /home/pi/toupcamsdk_raspberry_pi 0.0.0.0 8081 1280 720 60
 ```
 
+Если видишь ошибку `OSError: libtoupcam.so: cannot open shared object file`, выполни:
+```bash
+cd /home/pi/toupcamsdk_raspberry_pi
+./prepare_runtime_aarch64.sh
+ls -l /home/pi/toupcamsdk_raspberry_pi/python/libtoupcam.so
+```
+и затем снова:
+```bash
+./run_toupcam_stream.sh
+```
+
 ## 3) Проверка
 
 - Превью-страница: `http://<IP_RPI>:8081/`
