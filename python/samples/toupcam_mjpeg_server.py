@@ -96,7 +96,15 @@ class ToupcamMjpegBridge:
         self.cam.put_Option(toupcam.TOUPCAM_OPTION_BYTEORDER, 0)  # RGB
         if self.bandwidth > 0:
             # Lower USB bandwidth can improve stability on weak USB/power setups.
-            self.cam.put_Option(toupcam.TOUPCAM_OPTION_BANDWIDTH, self.bandwidth)
+            # Some camera models/firmware do not accept this option in current mode.
+            try:
+                self.cam.put_Option(toupcam.TOUPCAM_OPTION_BANDWIDTH, self.bandwidth)
+            except toupcam.HRESULTException as ex:
+                hr = ex.hr & 0xFFFFFFFF
+                print(
+                    "[WARN] Не удалось установить TOUPCAM_OPTION_BANDWIDTH="
+                    f"{self.bandwidth}, HRESULT=0x{hr:08x}. Продолжаю без ограничения bandwidth."
+                )
 
         bufsize = toupcam.TDIBWIDTHBYTES(self.width * 24) * self.height
         self.buf = bytes(bufsize)
