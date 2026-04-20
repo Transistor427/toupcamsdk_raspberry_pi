@@ -27,9 +27,9 @@ require_cmd() {
 }
 
 if [[ ! -d "${SDK_DIR}" ]]; then
-  if [[ -d "/home/pi/toupcamsdk.20250722" ]]; then
-    warn "Папка ${SDK_DIR} не найдена, использую /home/pi/toupcamsdk.20250722"
-    SDK_DIR="/home/pi/toupcamsdk.20250722"
+  if [[ -d "/home/pi/toupcamsdk_raspberry_pi" ]]; then
+    warn "Папка ${SDK_DIR} не найдена, использую /home/pi/toupcamsdk_raspberry_pi"
+    SDK_DIR="/home/pi/toupcamsdk_raspberry_pi"
     RULES_SRC="${SDK_DIR}/linux/udev/99-toupcam.rules"
     DEMO_DIR="${SDK_DIR}/samples/demosimplest"
     PY_DIR="${SDK_DIR}/python"

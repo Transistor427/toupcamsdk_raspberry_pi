@@ -24,19 +24,19 @@ sudo apt install -y python3 python3-pil
 
 ### 1.3 Подготовка `libtoupcam.so`
 ```bash
-cd /home/pi/toupcamsdk.20250722/python
-cp /home/pi/toupcamsdk.20250722/linux/arm64/libtoupcam.so ./libtoupcam.so
+cd /home/pi/toupcamsdk_raspberry_pi/python
+cp /home/pi/toupcamsdk_raspberry_pi/linux/arm64/libtoupcam.so ./libtoupcam.so
 ```
 
 Для 32-bit системы используй:
 ```bash
-cp /home/pi/toupcamsdk.20250722/linux/armhf/libtoupcam.so ./libtoupcam.so
+cp /home/pi/toupcamsdk_raspberry_pi/linux/armhf/libtoupcam.so ./libtoupcam.so
 ```
 
 ## 2) Запуск потока
 
 ```bash
-cd /home/pi/toupcamsdk.20250722/python
+cd /home/pi/toupcamsdk_raspberry_pi/python
 python3 samples/toupcam_mjpeg_server.py --host 0.0.0.0 --port 8081
 ```
 
@@ -63,8 +63,8 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/toupcamsdk.20250722/python
-ExecStart=/usr/bin/python3 /home/pi/toupcamsdk.20250722/python/samples/toupcam_mjpeg_server.py --host 0.0.0.0 --port 8081
+WorkingDirectory=/home/pi/toupcamsdk_raspberry_pi/python
+ExecStart=/usr/bin/python3 /home/pi/toupcamsdk_raspberry_pi/python/samples/toupcam_mjpeg_server.py --host 0.0.0.0 --port 8081
 Restart=always
 RestartSec=2
 
