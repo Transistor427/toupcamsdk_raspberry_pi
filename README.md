@@ -7,7 +7,7 @@
 
 Он берет кадры из Toupcam SDK и отдает MJPEG-поток по HTTP.
 
-## 1) Установка
+## 1) Установка (только зависимости)
 
 ### 1.1 Проверка архитектуры
 ```bash
@@ -16,28 +16,27 @@ uname -m
 - `aarch64` -> использовать `linux/arm64/libtoupcam.so`
 - `armv7l`/`armhf` -> использовать `linux/armhf/libtoupcam.so`
 
-### 1.2 Установка пакетов
+### 1.2 Запуск установочного скрипта
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-pil
+cd /home/pi/toupcamsdk_raspberry_pi
+chmod +x install_toupcam_cm4.sh
+./install_toupcam_cm4.sh
 ```
 
-### 1.3 Подготовка `libtoupcam.so`
-```bash
-cd /home/pi/toupcamsdk_raspberry_pi/python
-cp /home/pi/toupcamsdk_raspberry_pi/linux/arm64/libtoupcam.so ./libtoupcam.so
-```
-
-Для 32-bit системы используй:
-```bash
-cp /home/pi/toupcamsdk_raspberry_pi/linux/armhf/libtoupcam.so ./libtoupcam.so
-```
+Скрипт `install_toupcam_cm4.sh` только ставит пакеты и ничего не запускает.
 
 ## 2) Запуск потока
 
+Запуск одним скриптом:
 ```bash
-cd /home/pi/toupcamsdk_raspberry_pi/python
-python3 samples/toupcam_mjpeg_server.py --host 0.0.0.0 --port 8081
+cd /home/pi/toupcamsdk_raspberry_pi
+chmod +x run_toupcam_stream.sh
+./run_toupcam_stream.sh
+```
+
+Опционально с параметрами:
+```bash
+./run_toupcam_stream.sh /home/pi/toupcamsdk_raspberry_pi 0.0.0.0 8081 1280 720 60
 ```
 
 ## 3) Проверка
@@ -63,8 +62,8 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/toupcamsdk_raspberry_pi/python
-ExecStart=/usr/bin/python3 /home/pi/toupcamsdk_raspberry_pi/python/samples/toupcam_mjpeg_server.py --host 0.0.0.0 --port 8081
+WorkingDirectory=/home/pi/toupcamsdk_raspberry_pi
+ExecStart=/bin/bash /home/pi/toupcamsdk_raspberry_pi/run_toupcam_stream.sh /home/pi/toupcamsdk_raspberry_pi 0.0.0.0 8081 1280 720 60
 Restart=always
 RestartSec=2
 

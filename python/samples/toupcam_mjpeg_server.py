@@ -28,10 +28,11 @@ class CameraState:
 
 
 class ToupcamMjpegBridge:
-    def __init__(self, width, height, jpeg_quality):
+    def __init__(self, width, height, jpeg_quality, bandwidth):
         self.width_req = width
         self.height_req = height
         self.jpeg_quality = jpeg_quality
+        self.bandwidth = bandwidth
         self.state = CameraState()
         self.cam = None
         self.buf = None
@@ -74,11 +75,27 @@ class ToupcamMjpegBridge:
 
         self.width, self.height = self.cam.get_Size()
         self.cam.put_Option(toupcam.TOUPCAM_OPTION_BYTEORDER, 0)  # RGB
+        if self.bandwidth > 0:
+            # Lower USB bandwidth can improve stability on weak USB/power setups.
+            self.cam.put_Option(toupcam.TOUPCAM_OPTION_BANDWIDTH, self.bandwidth)
 
         bufsize = toupcam.TDIBWIDTHBYTES(self.width * 24) * self.height
         self.buf = bytes(bufsize)
 
-        self.cam.StartPullModeWithCallback(ToupcamMjpegBridge._on_event, self)
+        try:
+            self.cam.StartPullModeWithCallback(ToupcamMjpegBridge._on_event, self)
+        except toupcam.HRESULTException as ex:
+            hr = ex.hr & 0xFFFFFFFF
+            if hr == toupcam.E_GEN_FAILURE:
+                raise RuntimeError(
+                    "Не удалось запустить поток: E_GEN_FAILURE (0x8007001f). "
+                    "Обычно это нестабильный USB (кабель/порт/питание) или устройство уже занято."
+                ) from ex
+            if hr == toupcam.E_BUSY:
+                raise RuntimeError(
+                    "Не удалось запустить поток: E_BUSY. Камера уже используется другим процессом."
+                ) from ex
+            raise RuntimeError(f"Не удалось запустить поток, HRESULT=0x{hr:08x}") from ex
         print(f"[INFO] Camera started: {self.width}x{self.height}")
 
     def close(self):
@@ -171,6 +188,12 @@ def parse_args():
     p.add_argument("--width", type=int, default=0, help="Requested width (0 = camera default)")
     p.add_argument("--height", type=int, default=0, help="Requested height (0 = camera default)")
     p.add_argument("--jpeg-quality", type=int, default=80, help="JPEG quality 1..95")
+    p.add_argument(
+        "--bandwidth",
+        type=int,
+        default=70,
+        help="USB bandwidth 1..100 (lower = safer on weak USB), default: 70",
+    )
     return p.parse_args()
 
 
@@ -181,6 +204,7 @@ def main():
         width=args.width,
         height=args.height,
         jpeg_quality=max(1, min(95, args.jpeg_quality)),
+        bandwidth=max(1, min(100, args.bandwidth)),
     )
     bridge.open()
 
