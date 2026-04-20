@@ -71,7 +71,26 @@ class ToupcamMjpegBridge:
             raise RuntimeError("Не удалось открыть камеру")
 
         if self.width_req > 0 and self.height_req > 0:
-            self.cam.put_Size(self.width_req, self.height_req)
+            try:
+                self.cam.put_Size(self.width_req, self.height_req)
+            except toupcam.HRESULTException as ex:
+                hr = ex.hr & 0xFFFFFFFF
+                if hr == toupcam.E_INVALIDARG:
+                    supported = []
+                    for r in cams[0].model.res:
+                        if r.width > 0 and r.height > 0:
+                            supported.append(f"{r.width}x{r.height}")
+                    print(
+                        "[WARN] Запрошенное разрешение "
+                        f"{self.width_req}x{self.height_req} не поддерживается. "
+                        "Использую нативное разрешение камеры."
+                    )
+                    if supported:
+                        print(f"[INFO] Поддерживаемые разрешения: {', '.join(supported)}")
+                else:
+                    raise RuntimeError(
+                        f"Ошибка установки разрешения, HRESULT=0x{hr:08x}"
+                    ) from ex
 
         self.width, self.height = self.cam.get_Size()
         self.cam.put_Option(toupcam.TOUPCAM_OPTION_BYTEORDER, 0)  # RGB
