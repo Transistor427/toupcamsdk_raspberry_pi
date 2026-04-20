@@ -143,6 +143,9 @@ class MjpegHandler(server.BaseHTTPRequestHandler):
         if self.path in ("/", "/index.html"):
             self._serve_index()
             return
+        if self.path.startswith("/snapshot.jpg") or self.path.startswith("/snapshot"):
+            self._serve_snapshot()
+            return
         if self.path.startswith("/stream"):
             self._serve_stream()
             return
@@ -156,6 +159,7 @@ class MjpegHandler(server.BaseHTTPRequestHandler):
         body = (
             "<html><head><title>Toupcam MJPEG</title></head>"
             "<body><h3>Toupcam MJPEG bridge</h3>"
+            "<p>Snapshot: <a href='/snapshot.jpg'>/snapshot.jpg</a></p>"
             "<p>Stream: <a href='/stream'>/stream</a></p>"
             "<img src='/stream' style='max-width: 100%; height: auto;'/>"
             "</body></html>"
@@ -204,6 +208,20 @@ class MjpegHandler(server.BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             return
 
+    def _serve_snapshot(self):
+        with self.bridge.state.lock:
+            jpeg = self.bridge.state.jpeg
+        if jpeg is None:
+            self.send_error(503, "No frame available yet")
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Content-Length", str(len(jpeg)))
+        self.end_headers()
+        self.wfile.write(jpeg)
+
     def log_message(self, fmt, *args):  # noqa: A003
         return
 
@@ -238,6 +256,7 @@ def main():
     MjpegHandler.bridge = bridge
     httpd = ThreadedHttpServer((args.host, args.port), MjpegHandler)
     print(f"[INFO] MJPEG URL: http://{args.host}:{args.port}/stream")
+    print(f"[INFO] Snapshot URL: http://{args.host}:{args.port}/snapshot.jpg")
     print(f"[INFO] Health URL: http://{args.host}:{args.port}/health")
 
     try:

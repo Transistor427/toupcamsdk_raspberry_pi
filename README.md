@@ -101,3 +101,43 @@ journalctl -u toupcam-mjpeg.service -f
 - `http://127.0.0.1:8081/stream` (на самой Raspberry Pi)
 - `http://<IP_RPI>:8081/stream` (с другого устройства в сети)
 
+Одиночный снимок (JPEG):
+- `http://127.0.0.1:8081/snapshot.jpg`
+
+## 6) Кадр по команде из Klipper (TIMELAPSE_TAKE_FRAME)
+
+### 6.1 Подготовка скрипта снимка
+```bash
+cd /home/pi/toupcamsdk_raspberry_pi
+chmod +x klipper_take_frame.sh
+```
+
+Проверка вручную:
+```bash
+./klipper_take_frame.sh
+```
+
+### 6.2 Макрос в `printer.cfg`
+Добавь:
+```ini
+[gcode_shell_command timelapse_take_frame]
+command: /bin/bash /home/pi/toupcamsdk_raspberry_pi/klipper_take_frame.sh /home/pi/printer_data/timelapse/toupcam
+timeout: 10.
+verbose: False
+
+[gcode_macro TIMELAPSE_TAKE_FRAME]
+description: Save one frame from Toupcam MJPEG bridge
+gcode:
+    RUN_SHELL_COMMAND CMD=timelapse_take_frame
+```
+
+После изменения:
+```bash
+sudo systemctl restart klipper
+```
+
+Теперь можно вызывать в G-code:
+```gcode
+TIMELAPSE_TAKE_FRAME
+```
+
