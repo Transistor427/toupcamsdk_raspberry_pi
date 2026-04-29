@@ -62,6 +62,15 @@ ls -l /home/pi/toupcamsdk_raspberry_pi/python/libtoupcam.so
 - проверь порт `8081` (`ss -lntp | grep 8081`);
 - проверь сеть между ПК и Raspberry Pi.
 
+Если в логах есть `HRESULT=0x80070005` (`E_ACCESSDENIED`), настрой права к USB:
+```bash
+cd /home/pi/toupcamsdk_raspberry_pi
+sudo cp linux/udev/99-toupcam.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+После этого переподключи камеру (или перезагрузи Raspberry Pi) и снова запусти `./run_toupcam_stream.sh`.
+
 ## 4) Запуск в фоне через systemd (опционально)
 
 Создай сервис:

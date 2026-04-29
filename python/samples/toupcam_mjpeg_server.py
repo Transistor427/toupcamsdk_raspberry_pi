@@ -113,6 +113,14 @@ class ToupcamMjpegBridge:
             self.cam.StartPullModeWithCallback(ToupcamMjpegBridge._on_event, self)
         except toupcam.HRESULTException as ex:
             hr = ex.hr & 0xFFFFFFFF
+            if hr == toupcam.E_ACCESSDENIED:
+                raise RuntimeError(
+                    "Не удалось запустить поток: E_ACCESSDENIED (0x80070005). "
+                    "На Linux это обычно означает недостаточные права к USB-устройству. "
+                    "Установите udev-правила из `linux/udev/99-toupcam.rules`, затем выполните "
+                    "`sudo udevadm control --reload-rules && sudo udevadm trigger` и переподключите камеру. "
+                    "Как быстрый тест можно запустить под root."
+                ) from ex
             if hr == toupcam.E_GEN_FAILURE:
                 raise RuntimeError(
                     "Не удалось запустить поток: E_GEN_FAILURE (0x8007001f). "
