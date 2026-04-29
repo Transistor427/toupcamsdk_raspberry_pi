@@ -211,10 +211,3 @@ chmod +x uninstall.sh
 - `/usr/local/lib/libtoupcam.so`
 - `/etc/udev/rules.d/99-toupcam.rules`
 
-Опционально:
-
-```bash
-./uninstall.sh ~/toupcamsdk_raspberry_pi --remove-plugdev
-./uninstall.sh ~/toupcamsdk_raspberry_pi --purge-deps
-```
-
