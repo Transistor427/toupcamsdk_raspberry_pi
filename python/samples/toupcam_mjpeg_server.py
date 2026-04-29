@@ -199,7 +199,10 @@ class MjpegHandler(server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            return
 
     def _serve_health(self):
         with self.bridge.state.lock:
@@ -213,7 +216,10 @@ class MjpegHandler(server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            return
 
     def _serve_stream(self):
         self.send_response(200)
@@ -251,7 +257,10 @@ class MjpegHandler(server.BaseHTTPRequestHandler):
         self.send_header("Pragma", "no-cache")
         self.send_header("Content-Length", str(len(jpeg)))
         self.end_headers()
-        self.wfile.write(jpeg)
+        try:
+            self.wfile.write(jpeg)
+        except (BrokenPipeError, ConnectionResetError):
+            return
 
     def log_message(self, fmt, *args):  # noqa: A003
         return
