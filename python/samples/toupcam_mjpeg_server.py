@@ -3,6 +3,7 @@ import argparse
 import ctypes
 import io
 import pathlib
+import socket
 import sys
 import threading
 import time
@@ -293,6 +294,28 @@ def parse_args():
     return p.parse_args()
 
 
+def _advertise_host(bind_host):
+    # If listening on all interfaces, show a usable LAN address in logs.
+    if bind_host in ("0.0.0.0", "::", ""):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            if ip and not ip.startswith("127."):
+                return ip
+        except OSError:
+            pass
+        try:
+            ip = socket.gethostbyname(socket.gethostname())
+            if ip:
+                return ip
+        except OSError:
+            pass
+        return "127.0.0.1"
+    return bind_host
+
+
 def main():
     args = parse_args()
 
@@ -306,9 +329,10 @@ def main():
 
     MjpegHandler.bridge = bridge
     httpd = ThreadedHttpServer((args.host, args.port), MjpegHandler)
-    print(f"[INFO] MJPEG URL: http://{args.host}:{args.port}/stream")
-    print(f"[INFO] Snapshot URL: http://{args.host}:{args.port}/snapshot.jpg")
-    print(f"[INFO] Health URL: http://{args.host}:{args.port}/health")
+    public_host = _advertise_host(args.host)
+    print(f"[INFO] MJPEG URL: http://{public_host}:{args.port}/stream")
+    print(f"[INFO] Snapshot URL: http://{public_host}:{args.port}/snapshot.jpg")
+    print(f"[INFO] Health URL: http://{public_host}:{args.port}/health")
 
     try:
         httpd.serve_forever()

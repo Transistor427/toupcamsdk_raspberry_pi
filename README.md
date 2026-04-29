@@ -1,79 +1,133 @@
-# Toupcam на Raspberry Pi (Debian 12): краткий запуск потока
+# Toupcam MJPEG на Raspberry Pi (Debian 12)
 
-Это инструкция по запуску видеопотока через SDK `libtoupcam.so`.
+Пошаговая инструкция: клонируем репозиторий, ставим зависимости, запускаем MJPEG-поток с камеры Toupcam.
 
-Используется скрипт:
-- `python/samples/toupcam_mjpeg_server.py`
+## 1) Клонирование
 
-Он берет кадры из Toupcam SDK и отдает MJPEG-поток по HTTP.
-
-## 1) Установка (только зависимости)
-
-### 1.1 Проверка архитектуры
 ```bash
-uname -m
+cd ~
+git clone https://github.com/Transistor427/toupcamsdk_raspberry_pi toupcamsdk_raspberry_pi
+cd ~/toupcamsdk_raspberry_pi
 ```
-- `aarch64` -> использовать `linux/arm64/libtoupcam.so`
-- `armv7l`/`armhf` -> использовать `linux/armhf/libtoupcam.so`
 
-### 1.2 Запуск установочного скрипта
+Если репозиторий уже скачан:
+
 ```bash
-cd /home/pi/toupcamsdk_raspberry_pi
+cd ~/toupcamsdk_raspberry_pi
+git pull
+```
+
+## 2) Установка зависимостей
+
+```bash
+cd ~/toupcamsdk_raspberry_pi
 chmod +x install_toupcam_cm4.sh
 ./install_toupcam_cm4.sh
 ```
 
-Скрипт `install_toupcam_cm4.sh` только ставит пакеты и ничего не запускает.
+Скрипт делает всё нужное автоматически:
+- устанавливает зависимости;
+- подготавливает `libtoupcam.so` под текущую архитектуру;
+- устанавливает `udev`-правила для USB-доступа к камере;
+- выставляет права на исполняемые скрипты.
 
-## 2) Запуск потока
+После установки рекомендуется переподключить камеру (или перезагрузить Raspberry Pi).
 
-Запуск одним скриптом:
+## 3) Подготовка runtime `libtoupcam.so` (опционально, вручную)
+
+Проверка архитектуры:
+
 ```bash
-cd /home/pi/toupcamsdk_raspberry_pi
-chmod +x run_toupcam_stream.sh
-./run_toupcam_stream.sh
+uname -m
 ```
 
-Опционально с параметрами:
-```bash
-./run_toupcam_stream.sh /home/pi/toupcamsdk_raspberry_pi 0.0.0.0 8081 1280 720 60
-```
+- `aarch64` -> нужен `linux/arm64/libtoupcam.so`
+- `armv7l`/`armhf` -> нужен `linux/armhf/libtoupcam.so`
 
-Если видишь ошибку `cannot open shared object file` или `wrong ELF class`, выполни:
+Если нужно повторно/вручную подготовить runtime:
+
 ```bash
-cd /home/pi/toupcamsdk_raspberry_pi
+cd ~/toupcamsdk_raspberry_pi
+chmod +x prepare_runtime_aarch64.sh
 ./prepare_runtime_aarch64.sh
+```
+
+Проверка:
+
+```bash
 dpkg --print-architecture
-ls -l /home/pi/toupcamsdk_raspberry_pi/python/libtoupcam.so
-```
-и затем снова:
-```bash
-./run_toupcam_stream.sh
+ls -l ~/toupcamsdk_raspberry_pi/python/libtoupcam.so
 ```
 
-## 3) Проверка
+## 4) Настройка прав USB (опционально, вручную)
 
-- Превью-страница: `http://<IP_RPI>:8081/`
-- Поток MJPEG: `http://<IP_RPI>:8081/stream`
-- Статус: `http://<IP_RPI>:8081/health`
+Обычно этот шаг уже выполнен через `install_toupcam_cm4.sh`.
+Если видите `HRESULT=0x80070005 (E_ACCESSDENIED)`, можно повторить вручную:
 
-Если страница не открывается:
-- проверь, что процесс запущен;
-- проверь порт `8081` (`ss -lntp | grep 8081`);
-- проверь сеть между ПК и Raspberry Pi.
-
-Если в логах есть `HRESULT=0x80070005` (`E_ACCESSDENIED`), настрой права к USB:
 ```bash
-cd /home/pi/toupcamsdk_raspberry_pi
+cd ~/toupcamsdk_raspberry_pi
 sudo cp linux/udev/99-toupcam.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
-После этого переподключи камеру (или перезагрузи Raspberry Pi) и снова запусти `./run_toupcam_stream.sh`.
 
-## 4) Запуск в фоне через systemd (опционально)
+После этого переподключите камеру (или перезагрузите Raspberry Pi).
 
-Создай сервис:
+## 5) Запуск потока
+
+Быстрый запуск:
+
+```bash
+cd ~/toupcamsdk_raspberry_pi
+chmod +x run_toupcam_stream.sh
+./run_toupcam_stream.sh
+```
+
+`run_toupcam_stream.sh` больше не делает полную подготовку при каждом старте:
+- если `python/libtoupcam.so` уже есть, запуск идет сразу;
+- если файла нет, prepare выполняется автоматически один раз.
+
+Принудительно повторить prepare можно так:
+
+```bash
+FORCE_PREPARE=1 ./run_toupcam_stream.sh
+```
+
+Запуск с параметрами:
+
+```bash
+./run_toupcam_stream.sh ~/toupcamsdk_raspberry_pi 0.0.0.0 8081 1280 720 60
+```
+
+Где параметры:
+- путь к проекту
+- host
+- port
+- width
+- height
+- bandwidth
+
+## 6) Проверка работы
+
+Откройте в браузере:
+
+- `http://<IP_RPI>:8081/` — страница превью
+- `http://<IP_RPI>:8081/stream` — MJPEG поток
+- `http://<IP_RPI>:8081/snapshot.jpg` — одиночный кадр
+- `http://<IP_RPI>:8081/health` — статус
+
+Если не открывается:
+
+```bash
+ss -lntp | grep 8081
+```
+
+Убедитесь, что процесс запущен и сеть между ПК и Raspberry Pi доступна.
+
+## 7) Автозапуск через systemd (опционально)
+
+Создайте сервис:
+
 ```bash
 sudo tee /etc/systemd/system/toupcam-mjpeg.service >/dev/null <<'EOF'
 [Unit]
@@ -93,41 +147,31 @@ WantedBy=multi-user.target
 EOF
 ```
 
-Включение и запуск:
+Включите и запустите:
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now toupcam-mjpeg.service
 ```
 
-Проверка логов:
+Логи:
+
 ```bash
 journalctl -u toupcam-mjpeg.service -f
 ```
 
-## 5) URL для использования в приложениях
+## 8) Кадр из Klipper (TOUPTEK_TAKE_FRAME)
 
-Используй поток по адресу:
-- `http://127.0.0.1:8081/stream` (на самой Raspberry Pi)
-- `http://<IP_RPI>:8081/stream` (с другого устройства в сети)
+Подготовка:
 
-Одиночный снимок (JPEG):
-- `http://127.0.0.1:8081/snapshot.jpg`
-
-## 6) Кадр по команде из Klipper (TOUPTEK_TAKE_FRAME)
-
-### 6.1 Подготовка скрипта снимка
 ```bash
-cd /home/pi/toupcamsdk_raspberry_pi
+cd ~/toupcamsdk_raspberry_pi
 chmod +x klipper_take_frame.sh
-```
-
-Проверка вручную:
-```bash
 ./klipper_take_frame.sh
 ```
 
-### 6.2 Макрос в `printer.cfg`
-Добавь:
+Добавьте в `printer.cfg`:
+
 ```ini
 [gcode_shell_command touptek_take_frame]
 command: /bin/bash /home/pi/toupcamsdk_raspberry_pi/klipper_take_frame.sh /home/pi/printer_data/config/FRAMES
@@ -140,13 +184,37 @@ gcode:
     RUN_SHELL_COMMAND CMD=touptek_take_frame
 ```
 
-После изменения:
+Применение:
+
 ```bash
 sudo systemctl restart klipper
 ```
 
-Теперь можно вызывать в G-code:
+Дальше можно вызывать в G-code:
+
 ```gcode
 TOUPTEK_TAKE_FRAME
+```
+
+## 9) Удаление (uninstall)
+
+Базовый откат (то, что добавляла установка):
+
+```bash
+cd ~/toupcamsdk_raspberry_pi
+chmod +x uninstall.sh
+./uninstall.sh
+```
+
+Что удаляется:
+- `python/libtoupcam.so`
+- `/usr/local/lib/libtoupcam.so`
+- `/etc/udev/rules.d/99-toupcam.rules`
+
+Опционально:
+
+```bash
+./uninstall.sh ~/toupcamsdk_raspberry_pi --remove-plugdev
+./uninstall.sh ~/toupcamsdk_raspberry_pi --purge-deps
 ```
 
