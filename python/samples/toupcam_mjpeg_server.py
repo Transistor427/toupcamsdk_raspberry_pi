@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import ctypes
 import io
 import pathlib
 import sys
@@ -38,6 +39,7 @@ class ToupcamMjpegBridge:
         self.buf = None
         self.width = 0
         self.height = 0
+        self.row_pitch = 0
 
     @staticmethod
     def _on_event(nEvent, ctx):
@@ -45,7 +47,15 @@ class ToupcamMjpegBridge:
             ctx._on_image()
 
     def _encode_jpeg(self, rgb_bytes):
-        image = Image.frombytes("RGB", (self.width, self.height), rgb_bytes)
+        image = Image.frombuffer(
+            "RGB",
+            (self.width, self.height),
+            rgb_bytes,
+            "raw",
+            "RGB",
+            self.row_pitch,
+            1,
+        )
         out = io.BytesIO()
         image.save(out, format="JPEG", quality=self.jpeg_quality, optimize=True)
         return out.getvalue()
@@ -53,7 +63,7 @@ class ToupcamMjpegBridge:
     def _on_image(self):
         try:
             self.cam.PullImageV4(self.buf, 0, 24, 0, None)
-            jpeg = self._encode_jpeg(self.buf)
+            jpeg = self._encode_jpeg(self.buf.raw)
             with self.state.lock:
                 self.state.jpeg = jpeg
                 self.state.frames += 1
@@ -106,8 +116,9 @@ class ToupcamMjpegBridge:
                     f"{self.bandwidth}, HRESULT=0x{hr:08x}. Продолжаю без ограничения bandwidth."
                 )
 
-        bufsize = toupcam.TDIBWIDTHBYTES(self.width * 24) * self.height
-        self.buf = bytes(bufsize)
+        self.row_pitch = toupcam.TDIBWIDTHBYTES(self.width * 24)
+        bufsize = self.row_pitch * self.height
+        self.buf = ctypes.create_string_buffer(bufsize)
 
         try:
             self.cam.StartPullModeWithCallback(ToupcamMjpegBridge._on_event, self)
